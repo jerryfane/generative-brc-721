@@ -4,6 +4,8 @@
 
 This initiative seeks to spark more conversations around the Non-Fungible standard within the Bitcoin ordinals ecosystem. It aims to enhance the efficiency of launching Image Ordinals Collections, similar to the creation of fungible tokens through the BRC-20 standard.
 
+**Dune Dashboard Demo:** [Generative BRC-721 (WIP)](https://dune.com/j543/generative-brc-721)
+
 ## Context
 
 With Bitcoin network fees surging and settling at a new higher equilibrium, an influx of creators is joining the space. This trend is increasing demand for Bitcoin block space, expected to rise even further in the near future. To keep the door wide open for creators to launch their innovative ideas on the Bitcoin blockchain, we must optimize the current standard for launching Image Ordinals Collections.
