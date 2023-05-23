@@ -5,6 +5,9 @@
 This initiative seeks to spark more conversations around the Non-Fungible standard within the Bitcoin ordinals ecosystem. It aims to enhance the efficiency of launching Image Ordinals Collections, similar to the creation of fungible tokens through the BRC-20 standard.
 
 **Dune Dashboard Demo:** [Generative BRC-721 (WIP)](https://dune.com/j543/generative-brc-721)
+This Dune Analytics dashboard currently serves as a tool to monitor the minting activity of specific Generative BRC-721 collections. Please note that it may require further refinements to fully meet the needs of users.
+
+![](./assets/gen-brc721-dune.png)
 
 ## Context
 
@@ -29,7 +32,7 @@ The Deploy operation is a JSON/Text inscription that contains the general inform
 Note: It is also possible to create multiple deploy inscription for the same collection, that each will store a set of different traits. 
 
 *For demonstration purposes, we're using the OrdiBots collection*
-*Example of a deployed operation inscription: [Ord.io](b7205d40f3b1b1486567f0d6e53ff2812983db4c03ad7d3606812cd150c64802i0)*
+*Example of a deployed operation inscription: [Ord.io](https://www.ord.io/8326719)*
 
 ```javascript
 {
@@ -104,15 +107,15 @@ The Mint operation utilizes a JSON/Text inscription that encapsulates informatio
 }
 ```
 
-| Key   | Required | Description                                                  |
-| ----- | -------- | ------------------------------------------------------------ |
-| p     | YES      | Protocol: Helps other systems identify and process gen-brc-721 events |
-| op    | YES      | Operation: Type of event (Deploy, Mint)                      |
-| s     | YES      | Slug: Identifier of the collection. Not enforced if no indexer implemented |
-| t_ins | YES      | Traits (Deploy) Inscription: Array containing the inscription ID(s) of the deploy inscription(s) |
-| h     | YES      | Hash: SHA256 output of the resulting image                   |
-| id    | NO       | Token ID: ID of this Non-Fungible Ordinal in the collection. |
-| a     | YES      | Attributes: This is an array that carries the attribute values of this specific Non-Fungible Ordinal. Each array element is structured as follows: [inscription_index, traits_value]. <br />Here, the inscription_index represents the deploy inscription containing the base64 data of the corresponding trait, and traits_value denotes the actual value of the specific trait. The sequence of elements in the "a" array should correspond with the "trait_types" key ordering from the deploy inscription. <br />As an example, the ordering in this case would be: (1) background = bitcoin-orange; (2) accessories = rainbow; (3) body = black-and-white-triangular; (4) belly = square; (5) face = happy. |
+| Key   | Required   | Description                                                  |
+| ----- | ---------- | ------------------------------------------------------------ |
+| p     | YES        | Protocol: Helps other systems identify and process gen-brc-721 events |
+| op    | YES        | Operation: Type of event (Deploy, Mint)                      |
+| s     | YES        | Slug: Identifier of the collection. Not enforced if no indexer implemented |
+| t_ins | YES        | Traits (Deploy) Inscription: Array containing the inscription ID(s) of the deploy inscription(s) |
+| h     | ~~YES~~ NO | Hash: This refers to the SHA256 output of the generated image. It's an optional element; collection creators have the flexibility to decide if they want to include this additional security check on their collections. Opting not to use the hash can enhance the efficiency of the inscription process. |
+| id    | NO         | Token ID: ID of this Non-Fungible Ordinal in the collection. |
+| a     | YES        | Attributes: This is an array that carries the attribute values of this specific Non-Fungible Ordinal. Each array element is structured as follows: [inscription_index, traits_value]. <br />Here, the inscription_index represents the deploy inscription containing the base64 data of the corresponding trait, and traits_value denotes the actual value of the specific trait. The sequence of elements in the "a" array should correspond with the "trait_types" key ordering from the deploy inscription. <br />As an example, the ordering in this case would be: (1) background = bitcoin-orange; (2) accessories = rainbow; (3) body = black-and-white-triangular; (4) belly = square; (5) face = happy. |
 
 ## Impact
 
@@ -138,56 +141,75 @@ Indeed, most ordinal platforms do not query the blockchain every time an image i
 
 ### Re-create Onchain Images
 
-To regenerate images from a deploy inscription, we can utilize a straightforward script as follows. However, it's crucial to note that this script serves as an illustrative example and might not cover all scenarios comprehensively at this point.
+To reconstruct images from a deploy inscription, we can employ a simple script as detailed below. This script will not only generate the base64 encoded image but also its corresponding hash, taking as input the mint operation format described earlier.
+
+However, it's crucial to note that this script serves as an illustrative example and might not cover all scenarios comprehensively at this point.
 
 ```javascript
 const fetch = require('node-fetch');
-const { createCanvas, Image } = require('canvas');  // Import necessary functions from 'canvas' module
+const { createCanvas, Image } = require('canvas');
+const crypto = require('crypto');
 
-function createImage(attributes) {
-    // Fetch data from API
-    fetch('https://ordinals.com/content/b7205d40f3b1b1486567f0d6e53ff2812983db4c03ad7d3606812cd150c64802i0') 
-        .then(res => res.json())
-        .then(data => {
+async function createImage(attributes, t_ins, x_dim, y_dim) {
+    const baseImg = createCanvas(x_dim, y_dim);
+    const ctx = baseImg.getContext('2d');
 
-            // Initialize a transparent base image
-            const baseImg = createCanvas(32, 32);
-            const ctx = baseImg.getContext('2d');
+    let promises = [];
 
-            let promises = [];
-            for (let attribute of attributes) {
-                let traitType = attribute["trait_type"];
-                let value = attribute["value"];
+    for (let i = 0; i < attributes.length; i++) {
+        let attribute = attributes[i];
+        let inscriptionIndex = attribute[0];
+        let traitValue = attribute[1];
 
-                // Retrieve base64 image string from trait_base64_dict
-                let base64ImageString = data.traits[traitType][value]['base64'];
+        let traitsInscriptionId = t_ins[inscriptionIndex];
 
-                // Convert base64 image string to Image
+        let promise = fetch('https://ordinals.com/content/' + traitsInscriptionId)
+            .then(res => res.json())
+            .then(data => {
+                // Map the index of the attribute to the corresponding trait_type
+                let traitType = data.trait_types[i];
+
+                let base64ImageString = data.traits[traitType][traitValue]['base64'];
+
                 let img = new Image();
-                let promise = new Promise((resolve, reject) => {
+                return new Promise((resolve, reject) => {
                     img.onload = () => {
-                        // Draw the new image onto the base canvas considering the alpha channel.
                         ctx.drawImage(img, 0, 0);
                         resolve();
                     };
                     img.onerror = reject;
-                });
-                img.src = "data:image/png;base64," + base64ImageString;
-                promises.push(promise);
-            }
 
-            // Wait for all images to load
-            Promise.all(promises).then(() => {
-                // Convert the canvas to Data URL and display it in the console.
-                console.log(baseImg.toDataURL());
+                    img.src = "data:image/png;base64," + base64ImageString;
+                });
             });
-        });
+
+        promises.push(promise);
+    }
+
+    await Promise.all(promises);
+    return baseImg.toDataURL();
 }
 
-// Parse the command-line argument as JSON
-var attributes = JSON.parse(process.argv[2]);
-// Use the function with attributes
-createImage(attributes);
+// Parse the command-line arguments as JSON
+var obj = JSON.parse(process.argv[2]);
+
+// adjust the dimensions of the image. In this case is set to 32x32
+createImage(obj.a, obj.t_ins, 32, 32).then(data => {
+    // Split the data from the prefix
+    let [prefix, base64Data] = data.split(",");
+
+    // Convert the base64 string into bytes
+    let imgBytes = Buffer.from(base64Data, 'base64');
+
+    // Compute the SHA256 hash of the bytes
+    let hash = crypto.createHash('sha256');
+    hash.update(imgBytes);
+    let hashHex = hash.digest('hex');
+
+    console.log(hashHex);
+}).catch(error => {
+    console.error(error);
+});
 
 ```
 
