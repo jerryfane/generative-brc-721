@@ -48,6 +48,7 @@ Note: It is also possible to create multiple deploy inscription for the same col
         "belly",
         "face"
     ],
+    "dim": [32,32],
     "traits": {
         "background": {
             "blue": {
@@ -76,6 +77,7 @@ Note: It is also possible to create multiple deploy inscription for the same col
 | name        | NO       | Name: Human readable name of the collection                  |
 | supply      | NO       | Supply: Supply of the collection. Not enforced if no indexer implemented |
 | trait_types | YES      | Trait Types: This is an array which dictates the sequence in which the traits ought to be rendered. |
+| dim         | YES      | Dimensions: An array representing the dimensions (width and height) of the trait and final images  in pixels, defined as [width, height]. |
 | traits      | YES      | Traits: Object containing the unique traits of teh collection. Composed as: {trait type: {trait key: {name, base64 image encoded}}} |
 
 
@@ -113,8 +115,8 @@ The Mint operation utilizes a JSON/Text inscription that encapsulates informatio
 | op    | YES        | Operation: Type of event (Deploy, Mint)                      |
 | s     | YES        | Slug: Identifier of the collection. Not enforced if no indexer implemented |
 | t_ins | YES        | Traits (Deploy) Inscription: Array containing the inscription ID(s) of the deploy inscription(s) |
-| h     | ~~YES~~ NO | Hash: This refers to the SHA256 output of the generated image. It's an optional element; collection creators have the flexibility to decide if they want to include this additional security check on their collections. Opting not to use the hash can enhance the efficiency of the inscription process. |
-| id    | NO         | Token ID: ID of this Non-Fungible Ordinal in the collection. |
+| h     | ~~YES~~ NO | Hash: This refers to the SHA256 output of the generated image. <u>It's an optional element</u>; collection creators have the flexibility to decide if they want to include this additional security check on their collections. Opting not to use the hash can enhance the efficiency of the inscription process. |
+| id    | ~~NO~~ YES | Token ID: Unique identifier for each Non-Fungible Ordinal within the collection. Essential for tracking and distinguishing individual NFOs. |
 | a     | YES        | Attributes: This is an array that carries the attribute values of this specific Non-Fungible Ordinal. Each array element is structured as follows: [inscription_index, traits_value]. <br />Here, the inscription_index represents the deploy inscription containing the base64 data of the corresponding trait, and traits_value denotes the actual value of the specific trait. The sequence of elements in the "a" array should correspond with the "trait_types" key ordering from the deploy inscription. <br />As an example, the ordering in this case would be: (1) background = bitcoin-orange; (2) accessories = rainbow; (3) body = black-and-white-triangular; (4) belly = square; (5) face = happy. |
 
 ## Impact
@@ -150,11 +152,12 @@ const fetch = require('node-fetch');
 const { createCanvas, Image } = require('canvas');
 const crypto = require('crypto');
 
-async function createImage(attributes, t_ins, x_dim, y_dim) {
-    const baseImg = createCanvas(x_dim, y_dim);
-    const ctx = baseImg.getContext('2d');
+async function createImage(attributes, t_ins) {
+    let baseImg;
+    let ctx;
 
     let promises = [];
+    let images = new Array(attributes.length);
 
     for (let i = 0; i < attributes.length; i++) {
         let attribute = attributes[i];
@@ -172,9 +175,15 @@ async function createImage(attributes, t_ins, x_dim, y_dim) {
                 let base64ImageString = data.traits[traitType][traitValue]['base64'];
 
                 let img = new Image();
+                let [x_dim, y_dim] = data.dim || [32, 32];  // Default to [32, 32] if 'dim' is not defined
+
+                baseImg = createCanvas(x_dim, y_dim);
+                ctx = baseImg.getContext('2d');
+
                 return new Promise((resolve, reject) => {
                     img.onload = () => {
-                        ctx.drawImage(img, 0, 0);
+                        // Instead of drawing the image here, store it in the array
+                        images[i] = img;
                         resolve();
                     };
                     img.onerror = reject;
@@ -187,6 +196,12 @@ async function createImage(attributes, t_ins, x_dim, y_dim) {
     }
 
     await Promise.all(promises);
+    // Now draw the images in order
+    for (let i = 0; i < images.length; i++) {
+        if (images[i]) {  // Check if the image was successfully loaded
+            ctx.drawImage(images[i], 0, 0);
+        }
+    }
     return baseImg.toDataURL();
 }
 
@@ -194,22 +209,22 @@ async function createImage(attributes, t_ins, x_dim, y_dim) {
 var obj = JSON.parse(process.argv[2]);
 
 // adjust the dimensions of the image. In this case is set to 32x32
-createImage(obj.a, obj.t_ins, 32, 32).then(data => {
+createImage(obj.a, obj.t_ins).then(data => {
     // Split the data from the prefix
     let [prefix, base64Data] = data.split(",");
 
     // Convert the base64 string into bytes
     let imgBytes = Buffer.from(base64Data, 'base64');
-
+    console.log('base64:', base64Data)
     // Compute the SHA256 hash of the bytes
     let hash = crypto.createHash('sha256');
     hash.update(imgBytes);
-    let hashHex = hash.digest('hex');
 
-    console.log(hashHex);
+    let hashHex = hash.digest('hex');
+    console.log('*********************')
+    console.log('hash:', hashHex)
 }).catch(error => {
     console.error(error);
 });
-
 ```
 
