@@ -77,7 +77,7 @@ Note: It is also possible to create multiple deploy inscription for the same col
 | name        | NO       | Name: Human readable name of the collection                  |
 | supply      | NO       | Supply: Supply of the collection. Not enforced if no indexer implemented |
 | trait_types | YES      | Trait Types: This is an array which dictates the sequence in which the traits ought to be rendered. |
-| dim         | YES      | Dimensions: An array representing the dimensions (width and height) of the trait and final images  in pixels, defined as [width, height]. |
+| dim         | NO       | Dimensions: An array representing the dimensions (width and height) of the trait and final images  in pixels, defined as [width, height]. |
 | traits      | YES      | Traits: Object containing the unique traits of teh collection. Composed as: {trait type: {trait key: {name, base64 image encoded}}} |
 
 
