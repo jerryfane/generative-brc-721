@@ -1,0 +1,24 @@
+{
+  "name": "generative-brc-721",
+  "version": "1.0.0",
+  "description": "> ***TLDR**: This proposal introduces the Generative BRC-721 standard, a solution to optimize block space usage in the Bitcoin ordinals ecosystem, accommodating more creators and fostering innovation. The standard utilizes a \"deploy\" operation to create a Generative BRC-721 collection with unique traits stored on-chain. A \"mint\" operation then generates Non-Fungible Ordinals, referencing the traits from the deploy operation. This process cuts down block space usage between 50% and 90%. The impact of the proposed standard was demonstrated through a case study with a Generative BRC-721 collection called \"OrdiBots,\" showing a block space reduction of 55%. Front-ends will need to adapt to recreate and display images from the mint inscription text data. This proposed standard lays the groundwork for efficient, decentralized innovation in the Bitcoin blockchain.*",
+  "main": "image.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xdwong/generative-brc-721.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/0xdwong/generative-brc-721/issues"
+  },
+  "homepage": "https://github.com/0xdwong/generative-brc-721#readme",
+  "dependencies": {
+    "canvas": "^2.11.2",
+    "node-fetch": "2.6.11"
+  }
+}
