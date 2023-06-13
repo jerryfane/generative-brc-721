@@ -48,7 +48,7 @@ Note: It is also possible to create multiple deploy inscription for the same col
         "belly",
         "face"
     ],
-    "dim": [32,32],
+    "r": "2b126792c4a5d736dc071cea3a2439fd957f47b5cc7bf5c6fed5304ba5bd7f32i0",
     "traits": {
         "background": {
             "blue": {
@@ -88,42 +88,33 @@ The Mint operation utilizes a HTML type inscription that encapsulates informatio
 **The actual attributes are stored in the `nfo` variable as a json object.** 
 
 *For demonstration purposes, we're using the OrdiBots collection*
-*Example of a mint operation inscription:* [Ord.io](https://www.ord.io/preview/93e0eb23196201ae59b6f4c415183547c810a1695276791f2c8caddb16117b3bi0?type=text/html&raw=true)
+*Example of a mint operation inscription:* [Ord.io](https://www.ord.io/preview/3a6de40265a029e883b957d70bad60bc9372f2f4bd4fddeec4665f8b690df92bi0?type=text/html&raw=true)
 
 ```html
 <html>
 <body>
   <script>
-  let nfo = {
-       "p":"gen-brc-721",
-       "op":"mint",
-       "s":"ordibots",
-       "t_ins":[
-          "b7205d40f3b1b1486567f0d6e53ff2812983db4c03ad7d3606812cd150c64802i0"
-       ],
-       "id":"554",
-       "a":[[0,"bitcoin-orange"],
-          [0,"rainbow"],
-          [0,"black-and-white-triangular"],
-          [0,"square"],
-          [0,"happy"]
-       ]
-    };
+  let nfo = {"p":"gen-brc-721","op":"mint","s":"ordibots",
+  "t_ins":["fee71f3b8d958fb4b98142c3af8475a7d4a77e145289ab46a21642abafc4c2c9i0"],
+  "id":"554",
+  "a":[[0,"bitcoin-orange"],[0,"rainbow"],[0,"black-and-white-triangular"],[0,"square"],[0,"happy"]]};
   </script>
 
   <canvas id="canvas" width="500" height="500" style="image-rendering: pixelated;"></canvas>
 
   <script type="module">
-    Promise.all(nfo.t_ins.map(url => fetch(`/content/${url}`).then(response => response.json())))
+    Promise.all(nfo.t_ins.map(url => fetch(`https://ordinals.com/content/${url}`).then(response => response.json())))
       .then(async deploys => {
         console.log(deploys)
-        let GBRC721RenderImage = deploys[0].r ? new Function('return ' + deploys[0].r)() : null;
-        if (!GBRC721RenderImage) {
-          const module = await import('/content/2b126792c4a5d736dc071cea3a2439fd957f47b5cc7bf5c6fed5304ba5bd7f32i0');
-          GBRC721RenderImage = module.GBRC721RenderImage;
-        }
-        GBRC721RenderImage({
-          "a": nfo.a.map((item, index) => [item[0], deploys[item[0]].traits[deploys[item[0]].trait_types[index]][item[1]].base64])
+        let renderUrl = deploys[0].r
+          ? `/content/${deploys[0].r}`
+          : '/content/2b126792c4a5d736dc071cea3a2439fd957f47b5cc7bf5c6fed5304ba5bd7f32i0';
+
+        import(renderUrl).then(module => {
+          let GBRC721RenderImage = module.GBRC721RenderImage;
+          GBRC721RenderImage({
+            "a": nfo.a.map((item, index) => [item[0], deploys[item[0]].traits[deploys[item[0]].trait_types[index]][item[1]].base64])
+          });
         });
       })
       .catch(err => console.log(err));
